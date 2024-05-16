@@ -27,9 +27,9 @@ app.use("api/v1/",userRoutes)
 
 
 
-app.use(errorMiddleware)
+app.use(errorMiddleware);
 
-app.listen(process.env.PORT||5000,()=>{
+app.listen(process.env.PORT||5000, ()=>{
    console.log(`Server Started at port ${process.env.PORT}`)
 })
 
