@@ -1,11 +1,11 @@
 import express from "express";
-
+import newUser from '../controllers/userController.js'
 
 const router=express.Router();
 
 
 
-router.route("login")
+router.route("new").post(newUser)
 
 
 

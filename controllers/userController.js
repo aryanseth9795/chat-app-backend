@@ -2,7 +2,17 @@ import TryCatch from '../middlewares/tryCatch.js'
 import sendToken from '../utils/SendToken.js'
 import {User} from '../models/userModels.js'
 import ErrorHandler from '../utils/ErrorHandler.js'
-// Create a new user and save it to the database and save token in cookie
+import { compare } from 'bcrypt';
+
+
+
+
+
+
+
+
+
+// Creating  a new user and save it to the database and save token in cookie
 const newUser = TryCatch(async (req, res, next) => {
     const { name, username, password, bio } = req.body;
   
@@ -24,6 +34,27 @@ const newUser = TryCatch(async (req, res, next) => {
       password,
       avatar,
     });
-  
     sendToken(res, user, 201, "User created");
   });
+
+  const login=TryCatch(async(req,res,next)=>{
+
+
+    const{username,password}=req.body;
+
+
+    const user=await User.findOne(username).select('+password');
+
+    if(!user){
+      return next(new ErrorHandler("Invalid Username or Password",401))
+    }
+    
+    const isMatched=compare(password,user.password)
+
+if(!isMatched){
+return next(new ErrorHandler("Incorrect Password",401))
+}
+
+sendToken(res, user, 201, "Login Successfully");
+
+  })

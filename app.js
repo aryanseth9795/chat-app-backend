@@ -15,14 +15,14 @@ dbConnect(process.env.MONGO_URI)
 // middlewares
 app.use(cors());
 app.use(express.json());
-app.use(cors);
+
 
 
 
 
 
 //Routes
-app.use("api/v1/",userRoutes)
+app.use("users",userRoutes)
 
 
 
