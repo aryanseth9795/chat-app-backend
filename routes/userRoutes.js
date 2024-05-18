@@ -1,11 +1,13 @@
 import express from "express";
-import newUser from '../controllers/userController.js'
+import {SignUp, login, myProfile } from '../controllers/userController.js'
 
 const router=express.Router();
 
 
 
-router.route("new").post(newUser)
+router.route("SignUp").post(SignUp);
+router.route("login").post(login);
+router.route("me").post(isAutheticated,myProfile);
 
 
 
