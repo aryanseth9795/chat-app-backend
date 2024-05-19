@@ -1,6 +1,6 @@
 
 import jwt from 'jsonwebtoken'
-const isAutheticated=(req,res,next)=>{
+const isAuthenticated=(req,res,next)=>{
 
 const token =req.cookies["token"];// now it is solved 
 if (!token)
@@ -10,7 +10,7 @@ const user=jwt.verify(token,process.env.JWT_SECRET);
  next();
 }
 
-export default isAutheticated;
+export default isAuthenticated;
 
 
 // admin Routes authentication
@@ -28,3 +28,5 @@ export default isAutheticated;
       return next(new ErrorHandler("Only Admin can access this route", 401));
     next();
   };
+
+

@@ -3,3 +3,4 @@ const emitEvent = (req, event, users, data) => {
     const usersSocket = getSockets(users);
     io.to(usersSocket).emit(event, data);
   };
+  export default emitEvent;
