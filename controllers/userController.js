@@ -14,11 +14,15 @@ export const SignUp = TryCatch(async (req, res, next) => {
 
   // const cloudinaryResult = await uploadFilesToCloudinary([file]);
 
-  const avatar = {
-    public_id: cloudinaryResult[0].public_id,
-    url: cloudinaryResult[0].url,
-  };
+  // const avatar = {
+  //   public_id: cloudinaryResult[0].public_id,
+  //   url: cloudinaryResult[0].url,
+  // };
 
+  const avatar={
+    public_id:"working",
+    url:"working2"
+  }
   const user = await User.create({
     name,
     bio,
@@ -31,23 +35,24 @@ export const SignUp = TryCatch(async (req, res, next) => {
 
 export const login = TryCatch(async (req, res, next) => {
   const { username, password } = req.body;
-
-  const user = await User.findOne(username).select("+password");
+  const user = await User.findOne({username}).select("+password");
   if (!user) {
     return next(new ErrorHandler("Invalid Username or Password", 401));
   }
-
-  const isMatched = compare(password, user.password);
-
+  
+  const isMatched = await compare(password, user?.password);
+  
   if (!isMatched) {
     return next(new ErrorHandler("Incorrect Password", 401));
   }
-
+  
   sendToken(res, user, 201, "Login Successfully");
 });
 
 export const myProfile = TryCatch(async (req, res, next) => {
-  const user = await User.findById(req.user?._id);
+
+  const user = await User.findById(req.user);
+  
 res.status(200).json({
  success:true,
  user

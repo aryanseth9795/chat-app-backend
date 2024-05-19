@@ -21,7 +21,7 @@ app.use(cookieParser());
 
 
 //Routes
-app.use("users",userRoutes)
+app.use("/users",userRoutes)
 app.use(errorMiddleware);
 
 app.listen(process.env.PORT||5000, ()=>{
