@@ -19,10 +19,4 @@ router.route("/message").post(attachmentsMulter,sendAttachments);
 router.route("/message/:id").get(getChatDetails);
 router.route("/:id").get(getMessages).put(renameGroup).delete(deleteChat);
 
-
-
-
-
-
-
 export default router;
