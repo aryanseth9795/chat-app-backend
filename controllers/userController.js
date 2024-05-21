@@ -45,7 +45,6 @@ export const login = TryCatch(async (req, res, next) => {
   if (!isMatched) {
     return next(new ErrorHandler("Incorrect Password", 401));
   }
-  
   sendToken(res, user, 201, "Login Successfully");
 });
 
