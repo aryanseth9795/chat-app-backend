@@ -1,6 +1,7 @@
 import TryCatch from "../middlewares/tryCatch.js";
 import sendToken from "../utils/SendToken.js";
 import { User } from "../models/userModels.js";
+import { Request } from "../models/requestModel.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import { compare } from "bcrypt";
 
@@ -12,12 +13,12 @@ export const SignUp = TryCatch(async (req, res, next) => {
 
   if (!file) return next(new ErrorHandler("Please Upload Avatar"));
 
-  // const cloudinaryResult = await uploadFilesToCloudinary([file]);
+  const cloudinaryResult = await uploadToCloudinary([file]);
 
-  // const avatar = {
-  //   public_id: cloudinaryResult[0].public_id,
-  //   url: cloudinaryResult[0].url,
-  // };
+  const avatar = {
+    public_id: cloudinaryResult[0].public_id,
+    url: cloudinaryResult[0].url,
+  };
 
   const avatar={
     public_id:"working",
