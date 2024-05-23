@@ -20,10 +20,11 @@ export const SignUp = TryCatch(async (req, res, next) => {
     url: cloudinaryResult[0].url,
   };
 
-  const avatar={
-    public_id:"working",
-    url:"working2"
-  }
+  res.status(200).json({
+    message:true,
+    success:true
+  })
+ 
   const user = await User.create({
     name,
     bio,
