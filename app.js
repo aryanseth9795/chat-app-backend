@@ -10,6 +10,7 @@ import { Server } from "socket.io";
 import { createServer } from "http";
 import { v4 as uuid } from "uuid";
 import { socketAuthenticator } from './middlewares/socketAuth.js';
+import { getSockets } from './lib/helper.js';
 import {  CHAT_JOINED,
   CHAT_LEAVED,
   NEW_MESSAGE,
@@ -21,9 +22,7 @@ import {  CHAT_JOINED,
 dotenv.config({path:"./.env"});
 const app=express();
 
-
 //Cors option 
-
 const corsOptions = {
    origin: [
      "http://localhost:5173",
@@ -34,8 +33,8 @@ const corsOptions = {
    credentials: true,
  };
  
- 
- 
+
+ socket.to(userid).emit()
 // Connecting to Database
 dbConnect(process.env.MONGO_URI);
 
