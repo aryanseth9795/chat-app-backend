@@ -1,7 +1,7 @@
 import { ALERT, REFETCH_CHATS } from "../constants/event.js";
 import { getOtherMember } from "../lib/helper.js";
 import TryCatch from "../middlewares/tryCatch.js";
-import Chat from "../models/chatModel.js";
+import {Chat} from "../models/chatModel.js";
 import emitEvent from "../utils/emitEvent.js";
 
 export const newgroup = TryCatch(async (req, res, next) => {

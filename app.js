@@ -6,6 +6,7 @@ import dbConnect from './utils/db.js';
 import userRoutes from './routes/userRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import errorMiddleware from './middlewares/error.js';
+import cloudinary from 'cloudinary'
 import { Server } from "socket.io";
 import { createServer } from "http";
 import { v4 as uuid } from "uuid";
@@ -34,7 +35,7 @@ const corsOptions = {
  };
  
 
- socket.to(userid).emit()
+
 // Connecting to Database
 dbConnect(process.env.MONGO_URI);
 
