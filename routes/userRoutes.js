@@ -18,7 +18,7 @@ router.route("/signup").post(singleAvatar, SignUp);
 router.route("/login").post(login);
 
 router.use(isAuthenticated);
-router.route("/me").get(myProfile);
+router.route("/me").get(isAuthenticated,myProfile);
 
 router.route("/search").get(searchUser);
 

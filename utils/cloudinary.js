@@ -1,12 +1,11 @@
-
-
-import cloudinary from "cloudinary";
-import ErrorHandler from "./ErrorHandler";
+import {v2 as cloudinary} from "cloudinary";
+import ErrorHandler from "./ErrorHandler.js";
+import { v4 as uuid } from 'uuid';
 
 const getBase64 = (file) =>
   `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
 
-const UploadToCludinary = async (files = []) => {
+const UploadToCloudinary = async (files = []) => {
   const UploadPromises = files.map((file) => {
     return new Promise((resolve, reject) => {
       cloudinary.uploader.upload(
@@ -24,15 +23,16 @@ const UploadToCludinary = async (files = []) => {
   });
 
   try {
-
-    const uploadResult=await Promise.all(result);
-    const formattedResult=uploadResult.map((res)=>({
-        public_id:res.public_id,
-        url: result.secure_url,
-    }))
+    const uploadResult = await Promise.all(UploadPromises);
+    console.log(uploadResult)
+    const formattedResult = uploadResult.map((res) => ({
+      public_id: res.public_id,
+      url: res.secure_url,
+    }));
+    console.log(formattedResult)
     return formattedResult;
   } catch (error) {
-    throw new ErrorHandler("Error In uploading Files",err)
+    throw new ErrorHandler("Error In uploading Files",error);
   }
 };
-export default UploadToCludinary;
+export default UploadToCloudinary;

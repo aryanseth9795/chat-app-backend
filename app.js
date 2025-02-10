@@ -26,7 +26,7 @@ const app=express();
 //Cors option 
 const corsOptions = {
    origin: [
-     "http://localhost:5173",
+     "http://localhost:8000",
      "http://localhost:4173",
      process.env.CLIENT_URL,
    ],
@@ -63,8 +63,8 @@ app.use(cookieParser());
 
 
 //Routes
-app.use("/users",userRoutes);
-app.use("/chats",chatRoutes);
+app.use("/api/v1/users",userRoutes);
+app.use("/api/v1/chats",chatRoutes);
 
 // Configuring Sockets
 io.use((socket, next) => {

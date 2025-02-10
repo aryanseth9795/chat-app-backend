@@ -4,63 +4,61 @@ import { User } from "../models/userModels.js";
 import { Request } from "../models/requestModel.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import { compare } from "bcrypt";
+import UploadToCloudinary from "../utils/cloudinary.js";
 
 // Creating  a new user and save it to the database and save token in cookie
 export const SignUp = TryCatch(async (req, res, next) => {
-  const { name, username, password, bio } = req.body;
+  const { name, username, password, email, bio } = req.body;
 
   const file = req.file;
 
-  if (!file) return next(new ErrorHandler("Please Upload Avatar"));
-
-  const cloudinaryResult = await uploadToCloudinary([file]);
-
-  const avatar = {
-    public_id: cloudinaryResult[0].public_id,
-    url: cloudinaryResult[0].url,
-  };
-
-  res.status(200).json({
-    message:true,
-    success:true
-  })
- 
-  const user = await User.create({
-    name,
-    bio,
-    username,
-    password,
-    avatar,
-  });
-  sendToken(res, user, 201, "User created");
+const avatar={};
+  if (file) {
+    const cloudinaryResult = await UploadToCloudinary([file]);
+   
+    avatar = {
+      public_id: cloudinaryResult[0].public_id,
+      url: cloudinaryResult[0].url,
+    };
+  }
+   
+    const user = await User.create({
+      name,
+      bio,
+      username,
+      password,
+      avatar,
+    });
+    console.log(user);
+    sendToken(res, user, 201, "User created");
+  
 });
 
 export const login = TryCatch(async (req, res, next) => {
   const { username, password } = req.body;
-  const user = await User.findOne({username}).select("+password");
+  const user = await User.findOne({ username }).select("+password");
   if (!user) {
     return next(new ErrorHandler("Invalid Username or Password", 401));
   }
-  
+
   const isMatched = await compare(password, user?.password);
-  
+
   if (!isMatched) {
     return next(new ErrorHandler("Incorrect Password", 401));
   }
-  sendToken(res, user, 201, "Login Successfully");
+  sendToken(res, user, 201, `Login Successfully ${user.name}`);
 });
 
 export const myProfile = TryCatch(async (req, res, next) => {
-
   const user = await User.findById(req.user);
-  
-res.status(200).json({
- success:true,
- user
-})
+  if (!user) {
+    return next("Error in fetching user details", 401);
+  }
+  res.status(200).json({
+    success: true,
+    user,
+  });
 });
-
-
 
 export const searchUser = TryCatch(async (req, res) => {
   const { name = "" } = req.query;
@@ -115,7 +113,6 @@ export const sendFriendRequest = TryCatch(async (req, res, next) => {
     message: "Friend Request Sent",
   });
 });
-
 
 export const acceptFriendRequest = TryCatch(async (req, res, next) => {
   const { requestId, accept } = req.body;

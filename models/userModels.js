@@ -9,7 +9,7 @@ const schema = new Schema(
     },
     bio: {
       type: String,
-      required: true,
+      // required: true,
     },
     username: {
       type: String,
@@ -24,11 +24,11 @@ const schema = new Schema(
     avatar: {
       public_id: {
         type: String,
-        required: true,
+        // required: true,
       },
       url: {
         type: String,
-        required: true,
+        // required: true,
       },
     },
   },
