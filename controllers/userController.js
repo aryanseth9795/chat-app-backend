@@ -9,29 +9,28 @@ import UploadToCloudinary from "../utils/cloudinary.js";
 // Creating  a new user and save it to the database and save token in cookie
 export const SignUp = TryCatch(async (req, res, next) => {
   const { name, username, password, email, bio } = req.body;
-
+console.log(req.body)
   const file = req.file;
-
-const avatar={};
+  // const file_name=req.user.body{user,}
+  const avatar = {};
   if (file) {
     const cloudinaryResult = await UploadToCloudinary([file]);
-   
+
     avatar = {
       public_id: cloudinaryResult[0].public_id,
       url: cloudinaryResult[0].url,
     };
   }
-   
-    const user = await User.create({
-      name,
-      bio,
-      username,
-      password,
-      avatar,
-    });
-    console.log(user);
-    sendToken(res, user, 201, "User created");
-  
+
+  const user = await User.create({
+    name,
+    bio,
+    username,
+    password,
+    avatar,
+  });
+  console.log(user);
+  sendToken(res, user, 201, "User created");
 });
 
 export const login = TryCatch(async (req, res, next) => {
@@ -57,6 +56,14 @@ export const myProfile = TryCatch(async (req, res, next) => {
   res.status(200).json({
     success: true,
     user,
+  });
+});
+
+export const logout = TryCatch(async (req, res, next) => {
+
+  res.clearCookie("token").status(200).json({
+    success: true,
+   message:"Logout Successfully !"
   });
 });
 

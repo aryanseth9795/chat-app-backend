@@ -3,6 +3,7 @@ import {
   SignUp,
   acceptFriendRequest,
   login,
+  logout,
   myProfile,
   searchUser,
   sendFriendRequest,
@@ -18,7 +19,8 @@ router.route("/signup").post(singleAvatar, SignUp);
 router.route("/login").post(login);
 
 router.use(isAuthenticated);
-router.route("/me").get(isAuthenticated,myProfile);
+router.route("/me").get(myProfile);
+router.route("/logout").get(logout);
 
 router.route("/search").get(searchUser);
 
