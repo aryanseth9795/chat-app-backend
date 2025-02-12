@@ -3,7 +3,7 @@ import ErrorHandler from "./ErrorHandler.js";
 import { v4 as uuid } from 'uuid';
 
 const getBase64 = (file) =>
-  `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+  `data:${file?.mimetype};base64,${file.buffer.toString("base64")}`;
 
 const UploadToCloudinary = async (files = []) => {
   const UploadPromises = files.map((file) => {

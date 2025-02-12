@@ -1,6 +1,7 @@
 import TryCatch from "../middlewares/tryCatch.js";
 import sendToken from "../utils/SendToken.js";
 import { User } from "../models/userModels.js";
+import { Chat } from "../models/chatModel.js";
 import { Request } from "../models/requestModel.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import { compare } from "bcrypt";
@@ -9,19 +10,21 @@ import UploadToCloudinary from "../utils/cloudinary.js";
 // Creating  a new user and save it to the database and save token in cookie
 export const SignUp = TryCatch(async (req, res, next) => {
   const { name, username, password, email, bio } = req.body;
-console.log(req.body)
+
   const file = req.file;
-  // const file_name=req.user.body{user,}
-  const avatar = {};
+
+  let avatar = {
+    public_id: "",
+    url: "",
+  };
+
   if (file) {
     const cloudinaryResult = await UploadToCloudinary([file]);
-
     avatar = {
       public_id: cloudinaryResult[0].public_id,
       url: cloudinaryResult[0].url,
     };
   }
-
   const user = await User.create({
     name,
     bio,
@@ -29,7 +32,6 @@ console.log(req.body)
     password,
     avatar,
   });
-  console.log(user);
   sendToken(res, user, 201, "User created");
 });
 
@@ -60,14 +62,13 @@ export const myProfile = TryCatch(async (req, res, next) => {
 });
 
 export const logout = TryCatch(async (req, res, next) => {
-
   res.clearCookie("token").status(200).json({
     success: true,
-   message:"Logout Successfully !"
+    message: "Logout Successfully !",
   });
 });
 
-export const searchUser = TryCatch(async (req, res) => {
+export const searchUser = TryCatch(async (req, res, next) => {
   const { name = "" } = req.query;
 
   // Finding All my chats
@@ -77,11 +78,14 @@ export const searchUser = TryCatch(async (req, res) => {
   const allUsersFromMyChats = myChats.flatMap((chat) => chat.members);
 
   // Finding all users except me and my friends
-  const allUsersExceptMeAndFriends = await User.find({
-    _id: { $nin: allUsersFromMyChats },
-    name: { $regex: name, $options: "i" },
-  });
 
+  const allUsersExceptMeAndFriends = await User.find({
+    _id: { $nin: [allUsersFromMyChats, req.user.id] },
+    $or: [
+      { name: { $regex: name, $options: "i" } },
+      { username: { $regex: name, $options: "i" } },
+    ],
+  });
   // Modifying the response
   const users = allUsersExceptMeAndFriends.map(({ _id, name, avatar }) => ({
     _id,
@@ -113,7 +117,7 @@ export const sendFriendRequest = TryCatch(async (req, res, next) => {
     receiver: userId,
   });
 
-  emitEvent(req, NEW_REQUEST, [userId]);
+  // emitEvent(req, NEW_REQUEST, [userId]);
 
   return res.status(200).json({
     success: true,
