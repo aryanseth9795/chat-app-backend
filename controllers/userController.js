@@ -76,11 +76,12 @@ export const searchUser = TryCatch(async (req, res, next) => {
   const myChats = await Chat.find({ groupChat: false, members: req.user.id });
 
   // Extracting all users from my chats (friends or people I've chatted with)
+
   const allUsersFromMyChats = myChats.flatMap((chat) => chat.members);
 
   // Finding all users except me and my friends
   const allUsersExceptMeAndFriends = await User.find({
-    _id: { $nin: [allUsersFromMyChats, req.user.id] },
+    _id: { $nin: [...allUsersFromMyChats, req.user.id] },
     $or: [
       { name: { $regex: name, $options: "i" } },
       { username: { $regex: name, $options: "i" } },
@@ -142,14 +143,14 @@ export const sendFriendRequest = TryCatch(async (req, res, next) => {
 
 export const acceptFriendRequest = TryCatch(async (req, res, next) => {
   const { requestId, accept } = req.body;
-
+  console.log(requestId);
   const request = await Request.findById(requestId)
     .populate("sender", "name")
     .populate("receiver", "name");
 
   if (!request) return next(new ErrorHandler("Request not found", 404));
 
-  if (request.receiver._id.toString() !== req.user.toString())
+  if (request.receiver._id.toString() !== req.user.id.toString())
     return next(
       new ErrorHandler("You are not authorized to accept this request", 401)
     );
@@ -173,9 +174,9 @@ export const acceptFriendRequest = TryCatch(async (req, res, next) => {
     request.deleteOne(),
   ]);
 
-  emitEvent(req, REFETCH_CHATS, members);
+  // emitEvent(req, REFETCH_CHATS, members);
 
-  return res.status(200).json({
+  res.status(200).json({
     success: true,
     message: "Friend Request Accepted",
     senderId: request.sender._id,
@@ -183,18 +184,16 @@ export const acceptFriendRequest = TryCatch(async (req, res, next) => {
 });
 
 export const getNotification = TryCatch(async (req, res, next) => {
-  
-  const allRequests = await Request.find({ receiver: req.user.id }).select(
-    "sender"
-  ).populate("sender", " name username avatar");
+  const allRequests = await Request.find({ receiver: req.user.id })
+    .select("sender")
+    .populate("sender", " name username avatar");
 
   if (!allRequests) {
     next(new ErrorHandler("No Friend Requests", 401));
   }
 
-
   res.status(200).json({
     success: true,
-   allRequests
+    allRequests,
   });
 });
