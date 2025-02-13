@@ -37,7 +37,7 @@ export const SignUp = TryCatch(async (req, res, next) => {
 
 export const login = TryCatch(async (req, res, next) => {
   const { username, password } = req.body;
-  const user = await User.findOne({ username }).select("+password");
+  const user = await User.findOne({ username }).select("password");
   if (!user) {
     return next(new ErrorHandler("Invalid Username or Password", 401));
   }
@@ -51,7 +51,8 @@ export const login = TryCatch(async (req, res, next) => {
 });
 
 export const myProfile = TryCatch(async (req, res, next) => {
-  const user = await User.findById(req.user);
+  const user = await User.findById(req.user.id);
+
   if (!user) {
     return next("Error in fetching user details", 401);
   }
@@ -71,14 +72,13 @@ export const logout = TryCatch(async (req, res, next) => {
 export const searchUser = TryCatch(async (req, res, next) => {
   const { name = "" } = req.query;
 
-  // Finding All my chats
-  const myChats = await Chat.find({ groupChat: false, members: req.user });
+  // Finding all my chats
+  const myChats = await Chat.find({ groupChat: false, members: req.user.id });
 
-  //  extracting All Users from my chats means friends or people I have chatted with
+  // Extracting all users from my chats (friends or people I've chatted with)
   const allUsersFromMyChats = myChats.flatMap((chat) => chat.members);
 
   // Finding all users except me and my friends
-
   const allUsersExceptMeAndFriends = await User.find({
     _id: { $nin: [allUsersFromMyChats, req.user.id] },
     $or: [
@@ -86,12 +86,24 @@ export const searchUser = TryCatch(async (req, res, next) => {
       { username: { $regex: name, $options: "i" } },
     ],
   });
+
+  // Fetching users to whom the current user has already sent friend requests
+  const sentRequests = await Request.find({ sender: req.user.id }).select(
+    "receiver"
+  );
+
+  const sentRequestUserIds = sentRequests.map((req) => req.receiver.toString());
+
   // Modifying the response
-  const users = allUsersExceptMeAndFriends.map(({ _id, name, avatar }) => ({
-    _id,
-    name,
-    avatar: avatar.url,
-  }));
+  const users = allUsersExceptMeAndFriends.map(
+    ({ _id, name, avatar, username }) => ({
+      _id,
+      name,
+      avatar: avatar.url,
+      username,
+      request: sentRequestUserIds.includes(_id.toString()), // Add request flag if already sent
+    })
+  );
 
   return res.status(200).json({
     success: true,
@@ -102,26 +114,29 @@ export const searchUser = TryCatch(async (req, res, next) => {
 // Send Friend Request
 export const sendFriendRequest = TryCatch(async (req, res, next) => {
   const { userId } = req.body;
-
+  console.log(userId, "reciver");
+  console.log(userId, "sender");
   const request = await Request.findOne({
     $or: [
-      { sender: req.user, receiver: userId },
-      { sender: userId, receiver: req.user },
+      { sender: req.user.id, receiver: userId },
+      { sender: userId, receiver: req.user.id },
     ],
   });
 
   if (request) return next(new ErrorHandler("Request already sent", 400));
 
   await Request.create({
-    sender: req.user,
+    sender: req.user.id,
     receiver: userId,
   });
+
+  const user = await User.findById(userId).select("name");
 
   // emitEvent(req, NEW_REQUEST, [userId]);
 
   return res.status(200).json({
     success: true,
-    message: "Friend Request Sent",
+    message: `Friend Request Sent to ${user.name}`,
   });
 });
 
@@ -164,5 +179,22 @@ export const acceptFriendRequest = TryCatch(async (req, res, next) => {
     success: true,
     message: "Friend Request Accepted",
     senderId: request.sender._id,
+  });
+});
+
+export const getNotification = TryCatch(async (req, res, next) => {
+  
+  const allRequests = await Request.find({ receiver: req.user.id }).select(
+    "sender"
+  ).populate("sender", " name username avatar");
+
+  if (!allRequests) {
+    next(new ErrorHandler("No Friend Requests", 401));
+  }
+
+
+  res.status(200).json({
+    success: true,
+   allRequests
   });
 });

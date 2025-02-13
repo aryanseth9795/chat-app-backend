@@ -2,11 +2,14 @@ import jwt from "jsonwebtoken";
 import ErrorHandler from "../utils/ErrorHandler.js";
 
 const isAuthenticated = (req, res, next) => {
-  const token = req.cookies["token"]; // now it is solved
+  const token = req.cookies["token"];
   if (!token)
     return next(new ErrorHandler("Please login to access this route", 401));
   const user = jwt.verify(token, process.env.JWT_SECRET);
-  req.user = user.id;
+
+  if(!user) return next(new ErrorHandler("Please login ! Token Expired", 401));
+  req.user = user;
+ 
   next();
 };
 export default isAuthenticated;
