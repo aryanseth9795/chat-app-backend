@@ -37,7 +37,7 @@ export const SignUp = TryCatch(async (req, res, next) => {
 
 export const login = TryCatch(async (req, res, next) => {
   const { username, password } = req.body;
-  const user = await User.findOne({ username }).select("password");
+  const user = await User.findOne({ username }).select("name password");
   if (!user) {
     return next(new ErrorHandler("Invalid Username or Password", 401));
   }
