@@ -28,7 +28,10 @@ export const newgroup = TryCatch(async (req, res, next) => {
 // Displaying all chats
 
 export const myChats = TryCatch(async (req, res, next) => {
-  console.log("api hitted");
+  // console.log("api hitted");
+
+
+
   const chats = await Chat.find({ members: req.user.id }).populate(
     "members",
     "name username avatar"
@@ -54,7 +57,7 @@ export const myChats = TryCatch(async (req, res, next) => {
       }, []),
     };
   });
-console.log(transformedChats)
+// console.log(transformedChats)
   return res.status(200).json({
     success: true,
     chats: transformedChats,
