@@ -21,6 +21,8 @@ import {
   START_TYPING,
   STOP_TYPING,
 } from "./constants/event.js";
+import {Message} from "./models/messageModel.js";
+
 
 // Integrating DotEnv File
 dotenv.config({ path: "./.env" });
@@ -55,7 +57,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-const userSocketIDs = new Map();
+export const userSocketIDs = new Map();
 const onlineUsers = new Set();
 
 // Creating Server
@@ -67,8 +69,6 @@ const io = new Server(server, {
 //Routes
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/chats", chatRoutes);
-
-
 
 // app.set("io", io);
 
@@ -85,39 +85,43 @@ io.on("connection", (socket) => {
   const user = socket.user;
   // console.log(user);
   userSocketIDs.set(user._id.toString(), socket.id);
-  console.log(userSocketIDs)
+  // socket.emit("heelo")
+  console.log(userSocketIDs);
 
-  // socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
-  //   const messageForRealTime = {
-  //     content: message,
-  //     _id: uuid(),
-  //     sender: {
-  //       _id: user._id,
-  //       name: user.name,
-  //     },
-  //     chat: chatId,
-  //     createdAt: new Date().toISOString(),
-  //   };
+  socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
+    const messageForRealTime = {
+      content: message,
+      _id: uuid(),
+      sender: {
+        _id: user._id,
+        name: user.name,
+      },
+      chat: chatId,
+      createdAt: new Date().toISOString(),
+    };
 
-  // const messageForDB = {
-  //   content: message,
-  //   sender: user._id,
-  //   chat: chatId,
-  // };
+    console.log(messageForRealTime);
+    const messageForDB = {
+      content: message,
+      sender: user._id,
+      chat: chatId,
+    };
 
-  //   const membersSocket = getSockets(members);
-  //   io.to(membersSocket).emit(NEW_MESSAGE, {
-  //     chatId,
-  //     message: messageForRealTime,
-  //   });
-  //   io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
+    const membersSocket = getSockets(members);
 
-  //   try {
-  //     await Message.create(messageForDB);
-  //   } catch (error) {
-  //     throw new Error(error);
-  //   }
-  // });
+    io.to(membersSocket).emit(NEW_MESSAGE, {
+      chatId,
+      message: messageForRealTime,
+    });
+    io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
+
+      try {
+        await Message.create(messageForDB);
+        console.log("Message Saved");
+      } catch (error) {
+        throw new Error(error);
+      }
+  });
 
   // socket.on(START_TYPING, ({ members, chatId }) => {
   //   const membersSockets = getSockets(members);
