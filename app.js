@@ -58,6 +58,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 export const userSocketIDs = new Map();
+console.log(userSocketIDs);
 const onlineUsers = new Set();
 
 // Creating Server
@@ -88,6 +89,8 @@ io.on("connection", (socket) => {
   // socket.emit("heelo")
   console.log(userSocketIDs);
 
+
+
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const messageForRealTime = {
       content: message,
@@ -100,7 +103,7 @@ io.on("connection", (socket) => {
       createdAt: new Date().toISOString(),
     };
 
-    console.log(messageForRealTime);
+    // console.log(messageForRealTime);
     const messageForDB = {
       content: message,
       sender: user._id,
@@ -117,7 +120,7 @@ io.on("connection", (socket) => {
 
       try {
         await Message.create(messageForDB);
-        console.log("Message Saved");
+        // console.log("Message Saved");
       } catch (error) {
         throw new Error(error);
       }
@@ -147,11 +150,11 @@ io.on("connection", (socket) => {
   //   io.to(membersSocket).emit(ONLINE_USERS, Array.from(onlineUsers));
   // });
 
-  // socket.on("disconnect", () => {
-  //   userSocketIDs.delete(user._id.toString());
-  //   onlineUsers.delete(user._id.toString());
-  //   socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
-  // });
+  socket.on("disconnect", () => {
+    userSocketIDs.delete(user._id.toString());
+    onlineUsers.delete(user._id.toString());
+    socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
+  });
 });
 app.use(errorMiddleware);
 server.listen(process.env.PORT || 5000, () => {
