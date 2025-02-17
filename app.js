@@ -110,8 +110,10 @@ io.on("connection", (socket) => {
       chat: chatId,
     };
 
+    console.log("memmebers",members);
+    console.log("memmebers",user._id);
     const membersSocket = getSockets(members);
-
+console.log("membersSocket",membersSocket);
     io.to(membersSocket).emit(NEW_MESSAGE, {
       chatId,
       message: messageForRealTime,
@@ -120,7 +122,7 @@ io.on("connection", (socket) => {
 
       try {
         await Message.create(messageForDB);
-        // console.log("Message Saved");
+        console.log("Message Saved");
       } catch (error) {
         throw new Error(error);
       }

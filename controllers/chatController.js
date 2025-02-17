@@ -3,6 +3,10 @@ import { getOtherMember } from "../lib/helper.js";
 import TryCatch from "../middlewares/tryCatch.js";
 import { Chat } from "../models/chatModel.js";
 import emitEvent from "../utils/emitEvent.js";
+import ErrorHandler from "../utils/ErrorHandler.js";
+import { Message } from "../models/messageModel.js";
+import UploadToCloudinary from "../utils/cloudinary.js";
+import { User } from "../models/userModels.js";
 
 export const newgroup = TryCatch(async (req, res, next) => {
   const { name, members } = req.body;
@@ -30,20 +34,18 @@ export const newgroup = TryCatch(async (req, res, next) => {
 export const myChats = TryCatch(async (req, res, next) => {
   // console.log("api hitted");
 
-
-
   const chats = await Chat.find({ members: req.user.id }).populate(
     "members",
     "name username avatar"
   );
-// This is Comment section 
+  // This is Comment section
   const transformedChats = chats.map(({ _id, name, members, groupChat }) => {
     const otherMember = getOtherMember(members, req.user.id);
 
     return {
       _id,
       groupChat,
-   
+
       avatar: groupChat
         ? members.slice(0, 3).map(({ avatar }) => avatar.url)
         : [otherMember.avatar.url],
@@ -57,7 +59,7 @@ export const myChats = TryCatch(async (req, res, next) => {
       }, []),
     };
   });
-// console.log(transformedChats)
+  // console.log(transformedChats)
   return res.status(200).json({
     success: true,
     chats: transformedChats,
@@ -229,7 +231,7 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
 
   const [chat, me] = await Promise.all([
     Chat.findById(chatId),
-    User.findById(req.user, "name"),
+    User.findById(req.user.id, "name"),
   ]);
 
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
@@ -238,7 +240,7 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("Please provide attachments", 400));
 
   //   Upload files here
-  // const attachments = await uploadFilesToCloudinary(files);
+  const attachments = await UploadToCloudinary(files);
 
   const messageForDB = {
     content: "",
@@ -255,19 +257,22 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
     },
   };
 
-  const message = await Message.create(messageForDB);
+  try {
+    const message = await Message.create(messageForDB);
+    // emitEvent(req, NEW_MESSAGE, chat.members, {
+    //   message: messageForRealTime,
+    //   chatId,
+    // });
 
-  emitEvent(req, NEW_MESSAGE, chat.members, {
-    message: messageForRealTime,
-    chatId,
-  });
+    // emitEvent(req, NEW_MESSAGE_ALERT, chat.members, { chatId });
 
-  emitEvent(req, NEW_MESSAGE_ALERT, chat.members, { chatId });
-
-  return res.status(200).json({
-    success: true,
-    message,
-  });
+    res.status(200).json({
+      success: true,
+      message,
+    });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 export const getChatDetails = TryCatch(async (req, res, next) => {
@@ -374,6 +379,7 @@ export const deleteChat = TryCatch(async (req, res, next) => {
   });
 });
 
+// Sending messages in chunk
 export const getMessages = TryCatch(async (req, res, next) => {
   const chatId = req.params.id;
   const { page = 1 } = req.query;
@@ -385,7 +391,7 @@ export const getMessages = TryCatch(async (req, res, next) => {
 
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
 
-  if (!chat.members.includes(req.user.toString()))
+  if (!chat.members.includes(req.user?.id.toString()))
     return next(
       new ErrorHandler("You are not allowed to access this chat", 403)
     );
