@@ -24,15 +24,20 @@ const UploadToCloudinary = async (files = []) => {
 
   try {
     const uploadResult = await Promise.all(UploadPromises);
-    console.log(uploadResult)
+    
     const formattedResult = uploadResult.map((res) => ({
       public_id: res.public_id,
       url: res.secure_url,
     }));
-    console.log(formattedResult)
     return formattedResult;
   } catch (error) {
     throw new ErrorHandler("Error In uploading Files",error);
   }
 };
+
+
+
+
+
+
 export default UploadToCloudinary;

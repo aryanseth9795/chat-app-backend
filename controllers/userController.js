@@ -6,7 +6,7 @@ import { Request } from "../models/requestModel.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import { compare } from "bcrypt";
 import UploadToCloudinary from "../utils/cloudinary.js";
-
+import { v2 as cloudinary } from "cloudinary";
 // Creating  a new user and save it to the database and save token in cookie
 export const SignUp = TryCatch(async (req, res, next) => {
   const { name, username, password, email, bio } = req.body;
@@ -31,6 +31,7 @@ export const SignUp = TryCatch(async (req, res, next) => {
     username,
     password,
     avatar,
+    email,
   });
   sendToken(res, user, 201, "User created");
 });
@@ -62,6 +63,58 @@ export const myProfile = TryCatch(async (req, res, next) => {
   });
 });
 
+export const update = TryCatch(async (req, res, next) => {
+  // check username is already taken
+  const usernameexist = await User.findOne({ username: req?.body?.username });
+
+  // checking username is same as previous or not
+  if (
+    usernameexist &&
+    usernameexist._id.toString() !== req.user.id.toString()
+  ) {
+    return next(new ErrorHandler("Username already taken", 401));
+  }
+
+  const existuser = await User.findById(req.user.id);
+  if (!existuser) {
+    return next(new ErrorHandler("User not found", 401));
+  }
+  const file = req.file;
+
+  if (file) {
+    //uploading new avatar
+    const cloudinaryResult = await UploadToCloudinary([file]);
+    req.body.avatar = {
+      public_id: cloudinaryResult[0].public_id,
+      url: cloudinaryResult[0].url,
+    };
+
+    // deletion of previous avatar
+    if (existuser?.avatar?.public_id) {
+      console.log(existuser?.avatar?.public_id);
+      await cloudinary.uploader.destroy(existuser?.avatar?.public_id);
+      console.log("Deleted");
+    }
+  }
+
+  if (Object.keys(req.body).length === 0) {
+    return next(new ErrorHandler("No data to update", 401));
+  }
+
+  const newUser = await User.findByIdAndUpdate(req.user.id, req.body, {
+    new: true,
+  });
+
+  if (!newUser) {
+    return next(new ErrorHandler("Error in updating user details", 401));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Profile Updated Successfully",
+    newUser,
+  });
+});
 export const logout = TryCatch(async (req, res, next) => {
   res.clearCookie("token").status(200).json({
     success: true,
@@ -115,8 +168,7 @@ export const searchUser = TryCatch(async (req, res, next) => {
 // Send Friend Request
 export const sendFriendRequest = TryCatch(async (req, res, next) => {
   const { userId } = req.body;
-  console.log(userId, "reciver");
-  console.log(userId, "sender");
+
   const request = await Request.findOne({
     $or: [
       { sender: req.user.id, receiver: userId },

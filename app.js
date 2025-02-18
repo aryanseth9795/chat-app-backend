@@ -21,8 +21,7 @@ import {
   START_TYPING,
   STOP_TYPING,
 } from "./constants/event.js";
-import {Message} from "./models/messageModel.js";
-
+import { Message } from "./models/messageModel.js";
 
 // Integrating DotEnv File
 dotenv.config({ path: "./.env" });
@@ -70,8 +69,12 @@ const io = new Server(server, {
 //Routes
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/chats", chatRoutes);
+app.get("/", (req, res) => {
+  res.send("Server is running....");
+});
 
-// app.set("io", io);
+//settint up io socket to access in controller and middlewares
+app.set("io", io);
 
 // Configuring Sockets
 io.use((socket, next) => {
@@ -84,12 +87,10 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const user = socket.user;
-  // console.log(user);
+
   userSocketIDs.set(user._id.toString(), socket.id);
-  // socket.emit("heelo")
+
   console.log(userSocketIDs);
-
-
 
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const messageForRealTime = {
@@ -103,29 +104,25 @@ io.on("connection", (socket) => {
       createdAt: new Date().toISOString(),
     };
 
-    // console.log(messageForRealTime);
     const messageForDB = {
       content: message,
       sender: user._id,
       chat: chatId,
     };
 
-    console.log("memmebers",members);
-    console.log("memmebers",user._id);
     const membersSocket = getSockets(members);
-console.log("membersSocket",membersSocket);
+
     io.to(membersSocket).emit(NEW_MESSAGE, {
       chatId,
       message: messageForRealTime,
     });
     io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
 
-      try {
-        await Message.create(messageForDB);
-        console.log("Message Saved");
-      } catch (error) {
-        throw new Error(error);
-      }
+    try {
+      await Message.create(messageForDB);
+    } catch (error) {
+      throw new Error(error);
+    }
   });
 
   // socket.on(START_TYPING, ({ members, chatId }) => {

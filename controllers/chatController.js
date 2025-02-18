@@ -7,6 +7,7 @@ import ErrorHandler from "../utils/ErrorHandler.js";
 import { Message } from "../models/messageModel.js";
 import UploadToCloudinary from "../utils/cloudinary.js";
 import { User } from "../models/userModels.js";
+import { NEW_MESSAGE } from "../constants/event.js";
 
 export const newgroup = TryCatch(async (req, res, next) => {
   const { name, members } = req.body;
@@ -259,10 +260,10 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
 
   try {
     const message = await Message.create(messageForDB);
-    // emitEvent(req, NEW_MESSAGE, chat.members, {
-    //   message: messageForRealTime,
-    //   chatId,
-    // });
+    emitEvent(req, NEW_MESSAGE, chat.members, {
+      message: messageForRealTime,
+      chatId,
+    });
 
     // emitEvent(req, NEW_MESSAGE_ALERT, chat.members, { chatId });
 
