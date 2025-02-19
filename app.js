@@ -87,6 +87,12 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const user = socket.user;
+  if (user._id.toString()) {
+    // Remove old socket ID if the user was already connected
+    if (userSocketIDs.has(user._id.toString())) {
+      console.count(`User ${user._id} reconnected, replacing old socket.`);
+    }
+  }
 
   userSocketIDs.set(user._id.toString(), socket.id);
 
