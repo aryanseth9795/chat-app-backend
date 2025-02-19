@@ -87,14 +87,15 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const user = socket.user;
-  if (user._id.toString()) {
+  
     // Remove old socket ID if the user was already connected
     if (userSocketIDs.has(user._id.toString())) {
       console.count(`User ${user._id} reconnected, replacing old socket.`);
+      userSocketIDs.delete(user._id);
     }
-  }
+  
 
-  userSocketIDs.set(user._id.toString(), socket.id);
+  userSocketIDs.set(user?._id.toString(), socket?.id);
 
   console.log(userSocketIDs);
 
@@ -122,6 +123,9 @@ io.on("connection", (socket) => {
       chatId,
       message: messageForRealTime,
     });
+
+
+
     io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
 
     try {
@@ -156,8 +160,11 @@ io.on("connection", (socket) => {
   // });
 
   socket.on("disconnect", () => {
+    console.log("dis start")
     userSocketIDs.delete(user._id.toString());
     onlineUsers.delete(user._id.toString());
+    console.log("dis end")
+    console.log(userSocketIDs," after discon")
     socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });

@@ -8,7 +8,7 @@ import { compare } from "bcrypt";
 import UploadToCloudinary from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 import emitEvent from "../utils/emitEvent.js";
-import { NEW_NOTIFICATION_ALERT } from "../constants/event.js";    
+import { NEW_NOTIFICATION_ALERT } from "../constants/event.js";
 // Creating  a new user and save it to the database and save token in cookie
 export const SignUp = TryCatch(async (req, res, next) => {
   const { name, username, password, email, bio } = req.body;
@@ -54,11 +54,16 @@ export const login = TryCatch(async (req, res, next) => {
 });
 
 export const myProfile = TryCatch(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
-
-  if (!user) {
+  const userwithoutCount = await User.findById(req.user.id);
+  const notificationCount = await Request.countDocuments({
+    receiver: req.user.id,
+  });
+  if (!userwithoutCount) {
     return next("Error in fetching user details", 401);
   }
+
+  const user={...userwithoutCount.toObject(),notificationCount};
+  console.log(user)
   res.status(200).json({
     success: true,
     user,
@@ -186,9 +191,10 @@ export const sendFriendRequest = TryCatch(async (req, res, next) => {
   });
 
   const user = await User.findById(userId).select("name");
-
+  console.log("emmiting");
   emitEvent(req, NEW_NOTIFICATION_ALERT, [userId]);
-
+  console.log("emmiting done");
+  console.log("userid", userId);
   return res.status(200).json({
     success: true,
     message: `Friend Request Sent to ${user.name}`,
