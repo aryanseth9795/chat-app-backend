@@ -87,13 +87,12 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const user = socket.user;
-  
-    // Remove old socket ID if the user was already connected
-    if (userSocketIDs.has(user._id.toString())) {
-      console.count(`User ${user._id} reconnected, replacing old socket.`);
-      userSocketIDs.delete(user._id);
-    }
-  
+
+  // Remove old socket ID if the user was already connected
+  if (userSocketIDs.has(user._id.toString())) {
+    console.count(`User ${user._id} reconnected, replacing old socket.`);
+    userSocketIDs.delete(user._id);
+  }
 
   userSocketIDs.set(user?._id.toString(), socket?.id);
 
@@ -124,8 +123,6 @@ io.on("connection", (socket) => {
       message: messageForRealTime,
     });
 
-
-
     io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
 
     try {
@@ -135,15 +132,15 @@ io.on("connection", (socket) => {
     }
   });
 
-  // socket.on(START_TYPING, ({ members, chatId }) => {
-  //   const membersSockets = getSockets(members);
-  //   socket.to(membersSockets).emit(START_TYPING, { chatId });
-  // });
+  socket.on(START_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(START_TYPING, { chatId });
+  });
 
-  // socket.on(STOP_TYPING, ({ members, chatId }) => {
-  //   const membersSockets = getSockets(members);
-  //   socket.to(membersSockets).emit(STOP_TYPING, { chatId });
-  // });
+  socket.on(STOP_TYPING, ({ members, chatId }) => {
+    const membersSockets = getSockets(members);
+    socket.to(membersSockets).emit(STOP_TYPING, { chatId });
+  });
 
   // socket.on(CHAT_JOINED, ({ userId, members }) => {
   //   onlineUsers.add(userId.toString());
@@ -160,11 +157,11 @@ io.on("connection", (socket) => {
   // });
 
   socket.on("disconnect", () => {
-    console.log("dis start")
+    console.log("dis start");
     userSocketIDs.delete(user._id.toString());
     onlineUsers.delete(user._id.toString());
-    console.log("dis end")
-    console.log(userSocketIDs," after discon")
+    console.log("dis end");
+    console.log(userSocketIDs, " after discon");
     socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });

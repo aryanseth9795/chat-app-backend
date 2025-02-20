@@ -63,7 +63,7 @@ export const myProfile = TryCatch(async (req, res, next) => {
   }
 
   const user={...userwithoutCount.toObject(),notificationCount};
-  console.log(user)
+ 
   res.status(200).json({
     success: true,
     user,
