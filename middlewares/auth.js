@@ -9,7 +9,6 @@ const isAuthenticated = (req, res, next) => {
 
   if(!user) return next(new ErrorHandler("Please login ! Token Expired", 401));
   req.user = user;
- 
   next();
 };
 export default isAuthenticated;
