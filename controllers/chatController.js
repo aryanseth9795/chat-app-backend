@@ -1,14 +1,12 @@
-import { ALERT, REFETCH_CHATS } from "../constants/event.js";
+import { ALERT, NEW_MESSAGE, REFETCH_CHATS } from "../constants/event.js";
 import { getOtherMember } from "../lib/helper.js";
 import TryCatch from "../middlewares/tryCatch.js";
 import { Chat } from "../models/chatModel.js";
+import { Message } from "../models/messageModel.js";
+import { User } from "../models/userModels.js";
+import UploadToCloudinary from "../utils/cloudinary.js";
 import emitEvent from "../utils/emitEvent.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
-import { Message } from "../models/messageModel.js";
-import UploadToCloudinary from "../utils/cloudinary.js";
-import { User } from "../models/userModels.js";
-import { NEW_MESSAGE } from "../constants/event.js";
-import mongoose from "mongoose";
 
 export const newgroup = TryCatch(async (req, res, next) => {
   const { name, members } = req.body;
@@ -477,3 +475,5 @@ export const groupDetails = TryCatch(async (req, res, next) => {
     groupDetail,
   });
 });
+
+

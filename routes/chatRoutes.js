@@ -11,6 +11,7 @@ router.route("/newgroup").post(newgroup);
 router.route("/mychats").get(myChats);
 router.route("/mygroups").get(getMyGroups);
 router.route("/grpdetail/:id").get(groupDetails);
+router.route("/membersforadd/:id").get(groupDetails);
 router.route("/addmembers").put(addMembers);
 router.route("/removeMember").put(removeMember);
 router.route("/leave/:id").delete(leaveGroup);
