@@ -159,11 +159,10 @@ io.on("connection", (socket) => {
   // });
 
   socket.on("disconnect", () => {
-    console.log("dis start");
+ 
     userSocketIDs.delete(user._id.toString());
     onlineUsers.delete(user._id.toString());
-    console.log("dis end");
-    console.log(userSocketIDs, " after discon");
+    
     socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });
