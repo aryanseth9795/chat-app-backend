@@ -334,7 +334,7 @@ export const renameGroup = TryCatch(async (req, res, next) => {
   if (!chat.groupChat)
     return next(new ErrorHandler("This is not a group chat", 400));
 
-  if (chat.creator.toString() !== req.user.toString())
+  if (chat.creator.toString() !== req.user?.id.toString())
     return next(
       new ErrorHandler("You are not allowed to rename the group", 403)
     );
@@ -365,13 +365,13 @@ export const deleteChat = TryCatch(async (req, res, next) => {
       new ErrorHandler("You are not allowed to delete the group", 403)
     );
 
-  if (!chat.groupChat && !chat.members.includes(req.user.toString())) {
+  if (!chat.groupChat && !chat.members.includes(req.user?.id.toString())) {
     return next(
       new ErrorHandler("You are not allowed to delete the chat", 403)
     );
   }
 
-  //   Here we have to dete All Messages as well as attachments or files from cloudinary
+ // deleting all attachments of the grp
 
   const messagesWithAttachments = await Message.find({
     chat: chatId,

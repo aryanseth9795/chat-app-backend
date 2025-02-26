@@ -97,8 +97,9 @@ io.on("connection", (socket) => {
   }
 
   userSocketIDs.set(user?._id.toString(), socket?.id);
-
+  onlineUsers.add(user._id.toString());
   console.log(userSocketIDs);
+  console.log(onlineUsers);
 
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const messageForRealTime = {
@@ -159,10 +160,9 @@ io.on("connection", (socket) => {
   // });
 
   socket.on("disconnect", () => {
- 
     userSocketIDs.delete(user._id.toString());
     onlineUsers.delete(user._id.toString());
-    
+
     socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });
