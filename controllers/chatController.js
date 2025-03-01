@@ -288,21 +288,42 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
 
 export const getChatDetails = TryCatch(async (req, res, next) => {
 
+  console.log("hitted",req.params.id)
+  const membersArray = await Chat.findById(req.params.id).select(
+    "members groupChat name "
+  );
+//  console.log(membersArray)
+  let chatDetails = {};
+  const othermember = membersArray.members.filter(
+    (mem) => mem._id.toString() !== req.user.id.toString()
+  );
+  const OtherUserDetail = await User.find({ _id: othermember }).select(
+    "name username avatar"
+  );
+  console.log(OtherUserDetail)
 
-  const membersArray = await Chat.findById(req.params.id).select("members groupChat ");
+  if (!OtherUserDetail[0].name) return next(new ErrorHandler("No User Found", 401));
 
-
-  const othermember=membersArray.members.filter((mem)=>mem._id.toString()!==req.user.id.toString())
-
-  const OtherUserDetail=await User.findById(othermember).select("name username avatar");
-
-const chatDetails={members:membersArray,user:OtherUserDetail}
+  if (!membersArray?.groupChat) {
+    chatDetails = {
+      name: OtherUserDetail[0].name,
+      members: membersArray.members,
+      avatar: OtherUserDetail[0].avatar.url,
+      username: OtherUserDetail[0].username,
+      groupChat:membersArray.groupChat
+    };
+  } else {
+    chatDetails = {
+      name: membersArray.name,
+      members: membersArray?.members,
+      avatar: OtherUserDetail.slice(0,4).map((user) => user?.avatar?.url),
+      groupChat:membersArray.groupChat
+    };
+  }
   return res.status(200).json({
-        success: true,
-        chatDetails,
-      });
-
-
+    success: true,
+    chatDetails,
+  });
 });
 
 export const renameGroup = TryCatch(async (req, res, next) => {
