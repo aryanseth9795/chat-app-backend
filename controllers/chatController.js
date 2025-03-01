@@ -31,8 +31,6 @@ export const newgroup = TryCatch(async (req, res, next) => {
 // Displaying all chats
 
 export const myChats = TryCatch(async (req, res, next) => {
-
-
   const chats = await Chat.find({ members: req.user.id }).populate(
     "members",
     "name username avatar"
@@ -129,7 +127,6 @@ export const addMembers = TryCatch(async (req, res, next) => {
 export const removeMember = TryCatch(async (req, res, next) => {
   const { members, chatId } = req.body;
 
-
   const chat = await Chat.findById(chatId);
 
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
@@ -179,20 +176,15 @@ export const DeleteGroup = TryCatch(async (req, res, next) => {
 
 // delete whole group
 export const RenameGroup = TryCatch(async (req, res, next) => {
-  const { chatId,name} = req.body;
-  const chat = await Chat.findByIdAndUpdate(chatId,{name})
+  const { chatId, name } = req.body;
+  const chat = await Chat.findByIdAndUpdate(chatId, { name });
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
-
-
 
   return res.status(200).json({
     success: true,
     message: "Group Name Changed Successfully ",
   });
 });
-
-
-
 
 // Leaving Groups
 export const leaveGroup = TryCatch(async (req, res, next) => {
@@ -295,32 +287,22 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
 });
 
 export const getChatDetails = TryCatch(async (req, res, next) => {
-  if (req.query.populate === "true") {
-    const chat = await Chat.findById(req.params.id)
-      .populate("members", "name avatar")
-      .lean();
 
-    if (!chat) return next(new ErrorHandler("Chat not found", 404));
 
-    chat.members = chat.members.map(({ _id, name, avatar }) => ({
-      _id,
-      name,
-      avatar: avatar.url,
-    }));
+  const membersArray = await Chat.findById(req.params.id).select("members groupChat ");
 
-    return res.status(200).json({
-      success: true,
-      chat,
-    });
-  } else {
-    const chat = await Chat.findById(req.params.id);
-    if (!chat) return next(new ErrorHandler("Chat not found", 404));
 
-    return res.status(200).json({
-      success: true,
-      chat,
-    });
-  }
+  const othermember=membersArray.members.filter((mem)=>mem._id.toString()!==req.user.id.toString())
+
+  const OtherUserDetail=await User.findById(othermember).select("name username avatar");
+
+const chatDetails={members:membersArray,user:OtherUserDetail}
+  return res.status(200).json({
+        success: true,
+        chatDetails,
+      });
+
+
 });
 
 export const renameGroup = TryCatch(async (req, res, next) => {
@@ -371,7 +353,7 @@ export const deleteChat = TryCatch(async (req, res, next) => {
     );
   }
 
- // deleting all attachments of the grp
+  // deleting all attachments of the grp
 
   const messagesWithAttachments = await Message.find({
     chat: chatId,
