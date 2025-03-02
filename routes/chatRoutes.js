@@ -19,8 +19,8 @@ router.route("/deletegrp").delete(DeleteGroup);
 router.route("/leave/:id").delete(leaveGroup);
 router.route("/message/attachment").post(attachmentsMulter,sendAttachments);
 router.route("/membersforgroups").get(getUserForGroup);
-router.route("/message/:id").get(getMessages)
-// .put(renameGroup).delete(deleteChat);
+router.route("/deletechat").delete(deleteChat);
+router.route("/message/:id").get(getMessages);
 router.route("/:id").get(getChatDetails);
 
 export default router;
