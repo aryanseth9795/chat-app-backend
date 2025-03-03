@@ -9,6 +9,10 @@ import UploadToCloudinary from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 import emitEvent from "../utils/emitEvent.js";
 import { NEW_NOTIFICATION_ALERT,REFETCH_CHATS } from "../constants/event.js";
+
+
+
+
 // Creating  a new user and save it to the database and save token in cookie
 export const SignUp = TryCatch(async (req, res, next) => {
   const { name, username, password, email, bio } = req.body;
@@ -62,8 +66,10 @@ export const myProfile = TryCatch(async (req, res, next) => {
     return next("Error in fetching user details", 401);
   }
 
-  const user={...userwithoutCount.toObject(),notificationCount};
+  const user={...userwithoutCount.toObject(), notificationCount};
  
+
+  
   res.status(200).json({
     success: true,
     user,
