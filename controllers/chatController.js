@@ -1,5 +1,6 @@
 import { ALERT, NEW_MESSAGE, REFETCH_CHATS } from "../constants/event.js";
 import { getOtherMember } from "../lib/helper.js";
+import errorMiddleware from "../middlewares/error.js";
 import TryCatch from "../middlewares/tryCatch.js";
 import { Chat } from "../models/chatModel.js";
 import { Message } from "../models/messageModel.js";
@@ -163,7 +164,8 @@ export const removeMember = TryCatch(async (req, res, next) => {
 // delete whole group
 export const DeleteGroup = TryCatch(async (req, res, next) => {
   const { chatId } = req.body;
-  const chat = await Chat.find(chatId);
+  const chat = await Chat.findById(chatId);
+
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
 
   if (!chat.groupChat)
@@ -176,21 +178,25 @@ export const DeleteGroup = TryCatch(async (req, res, next) => {
 
   if (!deleted) return next(new ErrorHandler("Unable to Delete", 401));
 
-  await Promise.all([Chat.deleteOne(), Message.deleteMany({ chat: chatId })]);
-
-  emitEvent(req, REFETCH_CHATS, members);
-
+  await Promise.all([Chat.deleteOne({_id:chatId}), Message.deleteMany({ chat: chatId })]);
+  emitEvent(req, REFETCH_CHATS, chat.members);
   return res.status(200).json({
     success: true,
     message: "Group Deleted Successfully",
   });
 });
 
-// delete whole group
 export const RenameGroup = TryCatch(async (req, res, next) => {
   const { chatId, name } = req.body;
-  const chat = await Chat.findByIdAndUpdate(chatId, { name });
+
+  const chat = await Chat.findById(chatId);
+
   if (!chat) return next(new ErrorHandler("Chat not found", 404));
+  if (chat.creator.toString() !== req.user.id)
+    return next(new ErrorHandler("You are Not Admin", 401));
+
+  chat.name = name;
+  chat.save();
 
   return res.status(200).json({
     success: true,
@@ -315,7 +321,7 @@ export const getChatDetails = TryCatch(async (req, res, next) => {
 
   if (!membersArray?.groupChat) {
     chatDetails = {
-      chatId:membersArray._id,
+      chatId: membersArray._id,
       name: OtherUserDetail[0].name,
       members: membersArray.members,
       avatar: OtherUserDetail[0].avatar.url,
@@ -324,7 +330,7 @@ export const getChatDetails = TryCatch(async (req, res, next) => {
     };
   } else {
     chatDetails = {
-      chatId:membersArray._id,
+      chatId: membersArray._id,
       name: membersArray.name,
       members: membersArray?.members,
       avatar: OtherUserDetail.slice(0, 4).map((user) => user?.avatar?.url),
@@ -366,7 +372,7 @@ export const renameGroup = TryCatch(async (req, res, next) => {
 });
 
 export const deleteChat = TryCatch(async (req, res, next) => {
-  const {chatId} = req.body;
+  const { chatId } = req.body;
 
   const chat = await Chat.findById(chatId);
 
@@ -386,7 +392,10 @@ export const deleteChat = TryCatch(async (req, res, next) => {
 
   if (!deleted) return next(new ErrorHandler("Unable to Delete", 401));
 
-  await Promise.all([Chat.deleteOne({_id:chatId}), Message.deleteMany({ chat: chatId })]);
+  await Promise.all([
+    Chat.deleteOne({ _id: chatId }),
+    Message.deleteMany({ chat: chatId }),
+  ]);
 
   emitEvent(req, REFETCH_CHATS, members);
 
@@ -486,5 +495,3 @@ export const groupDetails = TryCatch(async (req, res, next) => {
     groupDetail,
   });
 });
-
-// export const deleteChat=TryCatch()
