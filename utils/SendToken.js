@@ -10,7 +10,7 @@ export const cookieOptions = {
 
 const sendToken = async (res, user, code, message) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "",
+    expiresIn: "5d",
   });
 
   res.status(code).cookie("token", token, cookieOptions).json({
