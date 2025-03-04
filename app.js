@@ -38,6 +38,7 @@ const corsOptions = {
 
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
+  sameSite: "None"
  
 };
 
