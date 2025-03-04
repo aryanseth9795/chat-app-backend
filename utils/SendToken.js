@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-const cookieOptions = {
+export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
   sameSite: "none",
@@ -10,7 +10,7 @@ const cookieOptions = {
 
 const sendToken = async (res, user, code, message) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRY,
+    expiresIn: "",
   });
 
   res.status(code).cookie("token", token, cookieOptions).json({

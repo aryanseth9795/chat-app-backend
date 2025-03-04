@@ -1,5 +1,5 @@
 import TryCatch from "../middlewares/tryCatch.js";
-import sendToken from "../utils/SendToken.js";
+import sendToken, { cookieOptions } from "../utils/SendToken.js";
 import { User } from "../models/userModels.js";
 import { Chat } from "../models/chatModel.js";
 import { Request } from "../models/requestModel.js";
@@ -129,7 +129,7 @@ export const update = TryCatch(async (req, res, next) => {
   });
 });
 export const logout = TryCatch(async (req, res, next) => {
-  res.clearCookie("token").status(200).json({
+  res.status(200).cookie("token","",{...cookieOptions,maxage:0}).json({
     success: true,
     message: "Logout Successfully !",
   });
