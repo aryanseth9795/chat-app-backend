@@ -32,13 +32,10 @@ const app = express();
 //Cors option
 const corsOptions = {
   origin: [
-    "http://localhost:5173",
-    // "http://192.168.1.2",
-    // "http://192.168.1.5:5173",
-    // "https://192.168.1.2:5173",
+    "https://chatsup.aryanseth.in",
     process.env.CLIENT_URL,
   ],
-  // origin:"*",
+
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
