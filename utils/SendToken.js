@@ -1,12 +1,5 @@
 import jwt from "jsonwebtoken";
-
-export const cookieOptions = {
-  maxAge:
-    process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  sameSite: "none",
-  httpOnly: true,
-  secure: true,
-};
+import { cookieOptions } from "../app.js";
 
 const sendToken = async (res, user, code, message) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {

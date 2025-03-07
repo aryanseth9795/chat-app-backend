@@ -1,5 +1,6 @@
 import TryCatch from "../middlewares/tryCatch.js";
-import sendToken, { cookieOptions } from "../utils/SendToken.js";
+import sendToken from "../utils/SendToken.js";
+import { cookieOptions } from "../app.js";
 import { User } from "../models/userModels.js";
 import { Chat } from "../models/chatModel.js";
 import { Request } from "../models/requestModel.js";
@@ -8,10 +9,11 @@ import { compare } from "bcrypt";
 import UploadToCloudinary from "../utils/cloudinary.js";
 import { v2 as cloudinary } from "cloudinary";
 import emitEvent from "../utils/emitEvent.js";
-import { NEW_NOTIFICATION_ALERT,REFETCH_CHATS } from "../constants/event.js";
-
-
-
+import {
+  NEW_NOTIFICATION_ALERT,
+  PROFILE_UPDATED,
+  REFETCH_CHATS,
+} from "../constants/event.js";
 
 // Creating  a new user and save it to the database and save token in cookie
 export const SignUp = TryCatch(async (req, res, next) => {
@@ -48,9 +50,7 @@ export const login = TryCatch(async (req, res, next) => {
   if (!user) {
     return next(new ErrorHandler("Invalid Username or Password", 401));
   }
-
   const isMatched = await compare(password, user?.password);
-
   if (!isMatched) {
     return next(new ErrorHandler("Incorrect Password", 401));
   }
@@ -66,10 +66,8 @@ export const myProfile = TryCatch(async (req, res, next) => {
     return next("Error in fetching user details", 401);
   }
 
-  const user={...userwithoutCount.toObject(), notificationCount};
- 
+  const user = { ...userwithoutCount.toObject(), notificationCount };
 
-  
   res.status(200).json({
     success: true,
     user,
@@ -104,9 +102,7 @@ export const update = TryCatch(async (req, res, next) => {
 
     // deletion of previous avatar
     if (existuser?.avatar?.public_id) {
-      console.log(existuser?.avatar?.public_id);
       await cloudinary.uploader.destroy(existuser?.avatar?.public_id);
-      console.log("Deleted");
     }
   }
 
@@ -122,6 +118,7 @@ export const update = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("Error in updating user details", 401));
   }
 
+  emitEvent(req, PROFILE_UPDATED);
   res.status(200).json({
     success: true,
     message: "Profile Updated Successfully",
@@ -129,10 +126,13 @@ export const update = TryCatch(async (req, res, next) => {
   });
 });
 export const logout = TryCatch(async (req, res, next) => {
-  res.status(200).cookie("token","",{...cookieOptions,maxage:0}).json({
-    success: true,
-    message: "Logout Successfully !",
-  });
+  res
+    .status(200)
+    .cookie("token", "", { ...cookieOptions, maxAge: 0 })
+    .json({
+      success: true,
+      message: "Logout Successfully !",
+    });
 });
 
 export const searchUser = TryCatch(async (req, res, next) => {
@@ -197,10 +197,9 @@ export const sendFriendRequest = TryCatch(async (req, res, next) => {
   });
 
   const user = await User.findById(userId).select("name");
-  console.log("emmiting");
+
   emitEvent(req, NEW_NOTIFICATION_ALERT, [userId]);
-  console.log("emmiting done");
-  console.log("userid", userId);
+
   return res.status(200).json({
     success: true,
     message: `Friend Request Sent to ${user.name}`,
@@ -209,7 +208,7 @@ export const sendFriendRequest = TryCatch(async (req, res, next) => {
 
 export const acceptFriendRequest = TryCatch(async (req, res, next) => {
   const { requestId, accept } = req.body;
-  console.log(requestId);
+
   const request = await Request.findById(requestId)
     .populate("sender", "name")
     .populate("receiver", "name");
@@ -257,7 +256,6 @@ export const getNotification = TryCatch(async (req, res, next) => {
   if (!allRequests) {
     next(new ErrorHandler("No Friend Requests", 401));
   }
-
   res.status(200).json({
     success: true,
     allRequests,

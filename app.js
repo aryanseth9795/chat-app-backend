@@ -18,6 +18,9 @@ import {
   NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
   ONLINE_USERS,
+  PROFILE_UPDATED,
+  REFETCH_CHATS,
+  REFETCH_ONLINE_USER,
   START_TYPING,
   STOP_TYPING,
 } from "./constants/event.js";
@@ -31,15 +34,21 @@ const app = express();
 
 //Cors option
 const corsOptions = {
-  origin: [
-    "https://chatsup.aryanseth.in",
-    // process.env.CLIENT_URL,
-  ],
+  origin: ["https://chatsup.aryanseth.in", process.env.CLIENT_URL],
 
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
-  sameSite: "None"
- 
+  sameSite: "None",
+};
+
+// Cookies Option
+
+export const cookieOptions = {
+  maxAge:
+    process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
+  // sameSite: "none",
+  httpOnly: true,
+  secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
 
 // Connecting to Database
@@ -86,6 +95,8 @@ io.use((socket, next) => {
   );
 });
 
+
+
 io.on("connection", (socket) => {
   const user = socket.user;
 
@@ -97,6 +108,9 @@ io.on("connection", (socket) => {
 
   userSocketIDs.set(user?._id.toString(), socket?.id);
   onlineUsers.add(user._id.toString());
+  
+
+
   console.log(userSocketIDs);
   console.log(onlineUsers);
 
@@ -144,6 +158,29 @@ io.on("connection", (socket) => {
     socket.to(membersSockets).emit(STOP_TYPING, { chatId });
   });
 
+
+  // Real time Updates on Profile Updatation
+  socket.on(PROFILE_UPDATED, ({ member }) => {
+    const onlineMembers = member.filter((user) => onlineUsers.has(user));
+    const membersSockets = getSockets(onlineMembers);
+    io.to(membersSockets).emit(REFETCH_CHATS);
+  });
+
+  socket.on(ONLINE_USERS, ({ member }) => {
+    socket.member=member;
+    const onlineMembers = member?.filter((user) => onlineUsers.has(user));
+    socket.emit(ONLINE_USERS,{onlineMembers}); 
+  });
+  
+  socket.on(REFETCH_ONLINE_USER, ({member}) => {
+  const onlineMembers = member?.filter((user) => onlineUsers.has(user));
+   const onlineMembersset = [...new Set(onlineMembers)];
+    const membersSockets = getSockets(onlineMembersset);
+    socket.to(membersSockets).emit(REFETCH_ONLINE_USER);
+    console.log(onlineMembers,"at refetch")
+  });
+
+
   // socket.on(CHAT_JOINED, ({ userId, members }) => {
   //   onlineUsers.add(userId.toString());
 
@@ -161,8 +198,13 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     userSocketIDs.delete(user._id.toString());
     onlineUsers.delete(user._id.toString());
+    const onlineMembers = socket?.member?.filter((user) => onlineUsers.has(user));
 
-    socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
+    console.log("disconne", socket.member)
+    const membersSockets = getSockets(onlineMembers);
+    socket.to(membersSockets).emit(REFETCH_ONLINE_USER,{onlineMembers});
+
+    // socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
   });
 });
 app.use(errorMiddleware);
