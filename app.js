@@ -13,8 +13,6 @@ import { v4 as uuid } from "uuid";
 import { socketAuthenticator } from "./middlewares/socketAuth.js";
 import { getSockets } from "./lib/helper.js";
 import {
-  CHAT_JOINED,
-  CHAT_LEAVED,
   NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
   ONLINE_USERS,
@@ -32,27 +30,33 @@ dotenv.config({ path: "./.env" });
 //Initialising server
 const app = express();
 
+
+
 //Cors option
 const corsOptions = {
   origin: ["https://chatsup.aryanseth.in", process.env.CLIENT_URL],
-
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
   sameSite: "None",
 };
 
-// Cookies Option
 
+
+// Cookies Option
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  // sameSite: "none",
+  sameSite: "None",// for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
 
+
+
 // Connecting to Database
 dbConnect(process.env.MONGO_URI);
+
+
 
 //Connecting to Cloudinary
 cloudinary.config({
@@ -66,15 +70,19 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
+
+// Creating Socket Map and Set of Online User
 export const userSocketIDs = new Map();
-console.log(userSocketIDs);
 const onlineUsers = new Set();
+
 
 // Creating Server
 const server = createServer(app);
 const io = new Server(server, {
   cors: corsOptions,
 });
+
+
 
 //Routes
 app.use("/api/v1/users", userRoutes);
@@ -83,8 +91,11 @@ app.get("/", (req, res) => {
   res.send("Server is running....");
 });
 
-//settint up io socket to access in controller and middlewares
+
+
+//setting up io socket to access in controller and middlewares
 app.set("io", io);
+
 
 // Configuring Sockets
 io.use((socket, next) => {
@@ -96,9 +107,10 @@ io.use((socket, next) => {
 });
 
 
-
+// Connecting Connection 
 io.on("connection", (socket) => {
   const user = socket.user;
+
 
   // Remove old socket ID if the user was already connected
   if (userSocketIDs.has(user._id.toString())) {
@@ -107,13 +119,34 @@ io.on("connection", (socket) => {
   }
 
   userSocketIDs.set(user?._id.toString(), socket?.id);
-  onlineUsers.add(user._id.toString());
-  
+  onlineUsers.add(user?._id.toString());
 
 
+  // Listing All Users and Online Users
   console.log(userSocketIDs);
   console.log(onlineUsers);
 
+// Fetching Online Users
+  socket.on(ONLINE_USERS, ({ member }) => {
+    socket.member = member;
+    const onlineMembers = member?.filter((user) => onlineUsers.has(user));
+    const onlineMembersset = [...new Set(onlineMembers)];
+    socket.emit(ONLINE_USERS, { onlineMembersset });
+    const membersSockets = getSockets(onlineMembersset);
+    socket.to(membersSockets).emit(REFETCH_ONLINE_USER);
+  });
+
+// Refetching Online Users
+  socket.on(REFETCH_ONLINE_USER, () => {
+    const onlineMembers = socket?.member?.filter((user) =>
+      onlineUsers.has(user)
+    );
+    const onlineMembersset = [...new Set(onlineMembers)];
+    socket.emit(ONLINE_USERS, { onlineMembersset });
+    console.log(onlineMembersset, "at refetch");
+  });
+
+  //Live Messages
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
     const messageForRealTime = {
       content: message,
@@ -148,16 +181,17 @@ io.on("connection", (socket) => {
     }
   });
 
+// Live Typing
   socket.on(START_TYPING, ({ members, chatId }) => {
     const membersSockets = getSockets(members);
     socket.to(membersSockets).emit(START_TYPING, { chatId });
   });
 
+//Live Stop Typing
   socket.on(STOP_TYPING, ({ members, chatId }) => {
     const membersSockets = getSockets(members);
     socket.to(membersSockets).emit(STOP_TYPING, { chatId });
   });
-
 
   // Real time Updates on Profile Updatation
   socket.on(PROFILE_UPDATED, ({ member }) => {
@@ -166,48 +200,23 @@ io.on("connection", (socket) => {
     io.to(membersSockets).emit(REFETCH_CHATS);
   });
 
-  socket.on(ONLINE_USERS, ({ member }) => {
-    socket.member=member;
-    const onlineMembers = member?.filter((user) => onlineUsers.has(user));
-    socket.emit(ONLINE_USERS,{onlineMembers}); 
-  });
-  
-  socket.on(REFETCH_ONLINE_USER, ({member}) => {
-  const onlineMembers = member?.filter((user) => onlineUsers.has(user));
-   const onlineMembersset = [...new Set(onlineMembers)];
-    const membersSockets = getSockets(onlineMembersset);
-    socket.to(membersSockets).emit(REFETCH_ONLINE_USER);
-    console.log(onlineMembers,"at refetch")
-  });
-
-
-  // socket.on(CHAT_JOINED, ({ userId, members }) => {
-  //   onlineUsers.add(userId.toString());
-
-  //   const membersSocket = getSockets(members);
-  //   io.to(membersSocket).emit(ONLINE_USERS, Array.from(onlineUsers));
-  // });
-
-  // socket.on(CHAT_LEAVED, ({ userId, members }) => {
-  //   onlineUsers.delete(userId.toString());
-
-  //   const membersSocket = getSockets(members);
-  //   io.to(membersSocket).emit(ONLINE_USERS, Array.from(onlineUsers));
-  // });
-
+  // Disconnecting User From Socket
   socket.on("disconnect", () => {
     userSocketIDs.delete(user._id.toString());
     onlineUsers.delete(user._id.toString());
-    const onlineMembers = socket?.member?.filter((user) => onlineUsers.has(user));
-
-    console.log("disconne", socket.member)
-    const membersSockets = getSockets(onlineMembers);
-    socket.to(membersSockets).emit(REFETCH_ONLINE_USER,{onlineMembers});
-
-    // socket.broadcast.emit(ONLINE_USERS, Array.from(onlineUsers));
+    const onlineMembers = socket?.member?.filter((user) =>
+      onlineUsers.has(user)
+    );
+    const onlineMembersset = [...new Set(onlineMembers)];
+    const membersSockets = getSockets(onlineMembersset);
+    socket.to(membersSockets).emit(REFETCH_ONLINE_USER);
   });
 });
+
+// Applying All ErrorHandling
 app.use(errorMiddleware);
+
+//Listening To Port
 server.listen(process.env.PORT || 5000, () => {
   console.log(`Server Started at port ${process.env.PORT}`);
 });
