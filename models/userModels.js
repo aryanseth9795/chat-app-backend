@@ -31,6 +31,9 @@ const schema = new Schema(
         type: String,
       },
     },
+    lastseen:{
+      type:Date
+    }
   },
   {
     timestamps: true,

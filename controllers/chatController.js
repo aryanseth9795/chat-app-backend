@@ -313,7 +313,7 @@ export const getChatDetails = TryCatch(async (req, res, next) => {
     (mem) => mem._id.toString() !== req.user.id.toString()
   );
   const OtherUserDetail = await User.find({ _id: othermember }).select(
-    "name username avatar"
+    "name username avatar lastseen"
   );
 
   if (!OtherUserDetail[0].name)
@@ -327,6 +327,7 @@ export const getChatDetails = TryCatch(async (req, res, next) => {
       avatar: OtherUserDetail[0].avatar.url,
       username: OtherUserDetail[0].username,
       groupChat: membersArray.groupChat,
+      lastseen:OtherUserDetail[0].lastseen
     };
   } else {
     chatDetails = {
@@ -335,6 +336,7 @@ export const getChatDetails = TryCatch(async (req, res, next) => {
       members: membersArray?.members,
       avatar: OtherUserDetail.slice(0, 4).map((user) => user?.avatar?.url),
       groupChat: membersArray.groupChat,
+   
     };
   }
   return res.status(200).json({

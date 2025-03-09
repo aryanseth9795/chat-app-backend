@@ -23,14 +23,13 @@ import {
   STOP_TYPING,
 } from "./constants/event.js";
 import { Message } from "./models/messageModel.js";
+import { User } from "./models/userModels.js";
 
 // Integrating DotEnv File
 dotenv.config({ path: "./.env" });
 
 //Initialising server
 const app = express();
-
-
 
 //Cors option
 const corsOptions = {
@@ -40,23 +39,17 @@ const corsOptions = {
   sameSite: "None",
 };
 
-
-
 // Cookies Option
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  sameSite: "None",// for dev it will commented
+  sameSite: "None",         // for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
 
-
-
 // Connecting to Database
 dbConnect(process.env.MONGO_URI);
-
-
 
 //Connecting to Cloudinary
 cloudinary.config({
@@ -70,19 +63,15 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-
 // Creating Socket Map and Set of Online User
 export const userSocketIDs = new Map();
 const onlineUsers = new Set();
-
 
 // Creating Server
 const server = createServer(app);
 const io = new Server(server, {
   cors: corsOptions,
 });
-
-
 
 //Routes
 app.use("/api/v1/users", userRoutes);
@@ -91,11 +80,8 @@ app.get("/", (req, res) => {
   res.send("Server is running....");
 });
 
-
-
 //setting up io socket to access in controller and middlewares
 app.set("io", io);
-
 
 // Configuring Sockets
 io.use((socket, next) => {
@@ -106,11 +92,9 @@ io.use((socket, next) => {
   );
 });
 
-
-// Connecting Connection 
+// Connecting Connection
 io.on("connection", (socket) => {
   const user = socket.user;
-
 
   // Remove old socket ID if the user was already connected
   if (userSocketIDs.has(user._id.toString())) {
@@ -121,12 +105,11 @@ io.on("connection", (socket) => {
   userSocketIDs.set(user?._id.toString(), socket?.id);
   onlineUsers.add(user?._id.toString());
 
-
   // Listing All Users and Online Users
   console.log(userSocketIDs);
   console.log(onlineUsers);
 
-// Fetching Online Users
+  // Fetching Online Users
   socket.on(ONLINE_USERS, ({ member }) => {
     socket.member = member;
     const onlineMembers = member?.filter((user) => onlineUsers.has(user));
@@ -136,14 +119,13 @@ io.on("connection", (socket) => {
     socket.to(membersSockets).emit(REFETCH_ONLINE_USER);
   });
 
-// Refetching Online Users
+  // Refetching Online Users
   socket.on(REFETCH_ONLINE_USER, () => {
     const onlineMembers = socket?.member?.filter((user) =>
       onlineUsers.has(user)
     );
     const onlineMembersset = [...new Set(onlineMembers)];
     socket.emit(ONLINE_USERS, { onlineMembersset });
-    console.log(onlineMembersset, "at refetch");
   });
 
   //Live Messages
@@ -181,13 +163,13 @@ io.on("connection", (socket) => {
     }
   });
 
-// Live Typing
+  // Live Typing
   socket.on(START_TYPING, ({ members, chatId }) => {
     const membersSockets = getSockets(members);
     socket.to(membersSockets).emit(START_TYPING, { chatId });
   });
 
-//Live Stop Typing
+  //Live Stop Typing
   socket.on(STOP_TYPING, ({ members, chatId }) => {
     const membersSockets = getSockets(members);
     socket.to(membersSockets).emit(STOP_TYPING, { chatId });
@@ -201,9 +183,22 @@ io.on("connection", (socket) => {
   });
 
   // Disconnecting User From Socket
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
+
+    //deleting user from socket
     userSocketIDs.delete(user._id.toString());
+
+    // deleting user from Online User Set
     onlineUsers.delete(user._id.toString());
+
+    // Updating Last seen
+    try {
+      await User.findByIdAndUpdate(user._id, { lastseen: Date.now() });
+    } catch (error) {
+      console.log(error);
+    }
+
+    // Refetching Other Users
     const onlineMembers = socket?.member?.filter((user) =>
       onlineUsers.has(user)
     );
