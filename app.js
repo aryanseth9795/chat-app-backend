@@ -24,7 +24,7 @@ import {
 } from "./constants/event.js";
 import { Message } from "./models/messageModel.js";
 import { User } from "./models/userModels.js";
-
+import axios from "axios";
 // Integrating DotEnv File
 dotenv.config({ path: "./.env" });
 
@@ -43,7 +43,7 @@ const corsOptions = {
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  sameSite: "None", // for dev it will commented
+  sameSite:  "None", // for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
