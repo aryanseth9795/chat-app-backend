@@ -43,7 +43,7 @@ const corsOptions = {
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  sameSite: "None",         // for dev it will commented
+  sameSite: "None", // for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
@@ -184,7 +184,6 @@ io.on("connection", (socket) => {
 
   // Disconnecting User From Socket
   socket.on("disconnect", async () => {
-
     //deleting user from socket
     userSocketIDs.delete(user._id.toString());
 
@@ -210,6 +209,23 @@ io.on("connection", (socket) => {
 
 // Applying All ErrorHandling
 app.use(errorMiddleware);
+
+// Keeping Server Alive On Render
+
+const keepServerAwake = () => {
+  setInterval(async () => {
+    try {
+      await axios.get(process.env.PING_URL);
+      console.log("✅ Server pinged to prevent sleep");
+    } catch (error) {
+      console.error("❌ Error pinging server:", error.message);
+    }
+  }, (process.env.PING_TIME || 12) * 60 * 1000); // Ping every 10 minutes
+};
+
+if (process.env.NODE_ENV !== "DEVELOPMENT") {
+  keepServerAwake();
+}
 
 //Listening To Port
 server.listen(process.env.PORT || 5000, () => {
