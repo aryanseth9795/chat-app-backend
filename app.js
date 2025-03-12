@@ -19,8 +19,10 @@ import {
   PROFILE_UPDATED,
   REFETCH_CHATS,
   REFETCH_ONLINE_USER,
+  SEEN_MESSAGE,
   START_TYPING,
   STOP_TYPING,
+  UPDATE_SEEN_MESSAGE,
 } from "./constants/event.js";
 import { Message } from "./models/messageModel.js";
 import { User } from "./models/userModels.js";
@@ -39,11 +41,12 @@ const corsOptions = {
   sameSite: "None",
 };
 
+
 // Cookies Option
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  sameSite:  "None", // for dev it will commented
+  sameSite: "None", // for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
@@ -66,6 +69,10 @@ app.use(cookieParser());
 // Creating Socket Map and Set of Online User
 export const userSocketIDs = new Map();
 const onlineUsers = new Set();
+const FetchList = () => {
+  console.log(userSocketIDs);
+  console.log(onlineUsers);
+};
 
 // Creating Server
 const server = createServer(app);
@@ -106,8 +113,7 @@ io.on("connection", (socket) => {
   onlineUsers.add(user?._id.toString());
 
   // Listing All Users and Online Users
-  console.log(userSocketIDs);
-  console.log(onlineUsers);
+  FetchList();
 
   // Fetching Online Users
   socket.on(ONLINE_USERS, ({ member }) => {
@@ -130,6 +136,9 @@ io.on("connection", (socket) => {
 
   //Live Messages
   socket.on(NEW_MESSAGE, async ({ chatId, members, message }) => {
+    const onlineMembers = members?.filter((id) => onlineUsers.has(id));
+    const membersSocket = getSockets(onlineMembers);
+
     const messageForRealTime = {
       content: message,
       _id: uuid(),
@@ -139,21 +148,27 @@ io.on("connection", (socket) => {
       },
       chat: chatId,
       createdAt: new Date().toISOString(),
+      status: onlineMembers.some((id) => id !== user._id.toString())
+        ? "Recieved"
+        : "Sent",
     };
 
+    console.log(
+      onlineMembers,
+      user.id,
+      messageForRealTime,
+      onlineMembers.some((id) => id !== user._id.toString())
+    );
     const messageForDB = {
       content: message,
       sender: user._id,
       chat: chatId,
     };
 
-    const membersSocket = getSockets(members);
-
     io.to(membersSocket).emit(NEW_MESSAGE, {
       chatId,
       message: messageForRealTime,
     });
-
     io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
 
     try {
@@ -161,6 +176,14 @@ io.on("connection", (socket) => {
     } catch (error) {
       throw new Error(error);
     }
+  });
+
+  socket.on(SEEN_MESSAGE, ({ chatId, messageId, sender }) => {
+    const membersSockets = getSockets(sender);
+    if (membersSockets)
+      socket
+        .to(membersSockets)
+        .emit(UPDATE_SEEN_MESSAGE, { chatId, messageId });
   });
 
   // Live Typing
@@ -190,13 +213,6 @@ io.on("connection", (socket) => {
     // deleting user from Online User Set
     onlineUsers.delete(user._id.toString());
 
-    // Updating Last seen
-    try {
-      await User.findByIdAndUpdate(user._id, { lastseen: Date.now() });
-    } catch (error) {
-      console.log(error);
-    }
-
     // Refetching Other Users
     const onlineMembers = socket?.member?.filter((user) =>
       onlineUsers.has(user)
@@ -204,14 +220,24 @@ io.on("connection", (socket) => {
     const onlineMembersset = [...new Set(onlineMembers)];
     const membersSockets = getSockets(onlineMembersset);
     socket.to(membersSockets).emit(REFETCH_ONLINE_USER);
+
+    // Updating Last seen
+    try {
+      await User.findByIdAndUpdate(user._id, { lastseen: Date.now() });
+    } catch (error) {
+      console.log(error);
+    }
+
+    FetchList();
   });
 });
+
+
 
 // Applying All ErrorHandling
 app.use(errorMiddleware);
 
 // Keeping Server Alive On Render
-
 const keepServerAwake = () => {
   setInterval(async () => {
     try {
