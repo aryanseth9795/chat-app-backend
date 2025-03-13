@@ -25,6 +25,7 @@ import {
   UPDATE_SEEN_MESSAGE,
 } from "./constants/event.js";
 import { Message } from "./models/messageModel.js";
+import { UnReadMessage } from "./models/unReadMessage.js";
 import { User } from "./models/userModels.js";
 import axios from "axios";
 // Integrating DotEnv File
@@ -41,12 +42,11 @@ const corsOptions = {
   sameSite: "None",
 };
 
-
 // Cookies Option
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  sameSite: "None", // for dev it will commented
+  // sameSite: "None", // for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
@@ -139,37 +139,51 @@ io.on("connection", (socket) => {
     const onlineMembers = members?.filter((id) => onlineUsers.has(id));
     const membersSocket = getSockets(onlineMembers);
 
+    const reciever = members.filter((id) => id !== user._id.toString());
+
+    const otherUserOnline = onlineMembers.some(
+      (id) => id !== user._id.toString()
+    );
+    const messageId = uuid();
     const messageForRealTime = {
       content: message,
-      _id: uuid(),
+      _id: messageId,
       sender: {
         _id: user._id,
         name: user.name,
       },
       chat: chatId,
       createdAt: new Date().toISOString(),
-      status: onlineMembers.some((id) => id !== user._id.toString())
-        ? "Recieved"
-        : "Sent",
+      status: otherUserOnline ? "Recieved" : "Sent",
     };
 
-    console.log(
-      onlineMembers,
-      user.id,
-      messageForRealTime,
-      onlineMembers.some((id) => id !== user._id.toString())
-    );
     const messageForDB = {
+      _id: messageId,
       content: message,
+      sender: user._id,
+      chat: chatId,
+      status: otherUserOnline ? "Recieved" : "Sent",
+    };
+    const messageForUnread = {
+      _id: messageId,
+      reciever: reciever,
       sender: user._id,
       chat: chatId,
     };
 
-    io.to(membersSocket).emit(NEW_MESSAGE, {
-      chatId,
-      message: messageForRealTime,
-    });
-    io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
+    if (otherUserOnline) {
+      io.to(membersSocket).emit(NEW_MESSAGE, {
+        chatId,
+        message: messageForRealTime,
+      });
+      io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
+    } else {
+      try {
+        await UnReadMessage.create(messageForUnread);
+      } catch (error) {
+        throw new Error(error);
+      }
+    }
 
     try {
       await Message.create(messageForDB);
@@ -178,12 +192,20 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on(SEEN_MESSAGE, ({ chatId, messageId, sender }) => {
+  socket.on(SEEN_MESSAGE, async ({ chatId, messageId, sender }) => {
     const membersSockets = getSockets(sender);
     if (membersSockets)
       socket
         .to(membersSockets)
         .emit(UPDATE_SEEN_MESSAGE, { chatId, messageId });
+    try {
+      await Message.findOneAndUpdate(
+        { chat: chatId, _id: messageId },
+        { status: "Seen" }
+      );
+    } catch (error) {
+      console.log(error);
+    }
   });
 
   // Live Typing
@@ -231,8 +253,6 @@ io.on("connection", (socket) => {
     FetchList();
   });
 });
-
-
 
 // Applying All ErrorHandling
 app.use(errorMiddleware);
