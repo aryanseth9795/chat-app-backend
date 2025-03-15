@@ -13,11 +13,14 @@ import { v4 as uuid } from "uuid";
 import { socketAuthenticator } from "./middlewares/socketAuth.js";
 import { getSockets } from "./lib/helper.js";
 import {
+  FETCH_UNREAD_MESSAGES,
+  MARK_ALL_READ_MESSAGE,
   NEW_MESSAGE,
   NEW_MESSAGE_ALERT,
   ONLINE_USERS,
   PROFILE_UPDATED,
   REFETCH_CHATS,
+  REFETCH_MESSAGE,
   REFETCH_ONLINE_USER,
   SEEN_MESSAGE,
   START_TYPING,
@@ -39,14 +42,14 @@ const corsOptions = {
   origin: ["https://chatsup.aryanseth.in", process.env.CLIENT_URL],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
-  sameSite: "None",
+  sameSite: "None", // for dev it will commented
 };
 
 // Cookies Option
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-   sameSite: "None", // for dev it will commented
+  sameSite: "None", // for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
@@ -125,6 +128,28 @@ io.on("connection", (socket) => {
     socket.to(membersSockets).emit(REFETCH_ONLINE_USER);
   });
 
+  socket.on(FETCH_UNREAD_MESSAGES, async () => {
+    const unreaddata = await UnReadMessage.aggregate([
+      { $match: { receiver: user._id } },
+      {
+        $group: {
+          _id: { chatId: "$chatId", sender: "$sender" },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          chatId: "$_id.chatId",
+          sender: "$_id.sender",
+          count: 1,
+        },
+      },
+    ]);
+
+    socket.emit(FETCH_UNREAD_MESSAGES, { unreaddata });
+  });
+
   // Refetching Online Users
   socket.on(REFETCH_ONLINE_USER, () => {
     const onlineMembers = socket?.member?.filter((user) =>
@@ -139,12 +164,12 @@ io.on("connection", (socket) => {
     const onlineMembers = members?.filter((id) => onlineUsers.has(id));
     const membersSocket = getSockets(onlineMembers);
 
-    const reciever = members.filter((id) => id !== user._id.toString());
+    const receiver = members.filter((id) => id !== user._id.toString());
 
-    const otherUserOnline = onlineMembers.some(
-      (id) => id !== user._id.toString()
-    );
+    const otherUserOnline = receiver.some((id) => onlineUsers.has(id));
+
     const messageId = uuid();
+
     const messageForRealTime = {
       content: message,
       _id: messageId,
@@ -164,20 +189,29 @@ io.on("connection", (socket) => {
       chat: chatId,
       status: otherUserOnline ? "Recieved" : "Sent",
     };
+
     const messageForUnread = {
       _id: messageId,
-      reciever: reciever,
+      receiver,
       sender: user._id,
-      chat: chatId,
+      chatId,
     };
 
     if (otherUserOnline) {
-      io.to(membersSocket).emit(NEW_MESSAGE, {
+      const memberSoc = getSockets(members);
+      io.to(memberSoc).emit(NEW_MESSAGE, {
         chatId,
         message: messageForRealTime,
       });
-      io.to(membersSocket).emit(NEW_MESSAGE_ALERT, { chatId });
+      io.to(membersSocket).emit(NEW_MESSAGE_ALERT, {
+        chatId,
+        sender: user._id,
+      });
     } else {
+      socket.emit(NEW_MESSAGE, {
+        chatId,
+        message: messageForRealTime,
+      });
       try {
         await UnReadMessage.create(messageForUnread);
       } catch (error) {
@@ -193,7 +227,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on(SEEN_MESSAGE, async ({ chatId, messageId, sender }) => {
-    const membersSockets = getSockets(sender);
+    const membersSockets = getSockets([sender]);
     if (membersSockets)
       socket
         .to(membersSockets)
@@ -205,6 +239,27 @@ io.on("connection", (socket) => {
       );
     } catch (error) {
       console.log(error);
+    }
+  });
+
+  socket.on(MARK_ALL_READ_MESSAGE, async ({ chatId, reciever, sender }) => {
+    if (sender === user._id.toString()) return;
+    try {
+      await Promise.all([
+        Message.updateMany(
+          { chat: chatId, $or: [{ status: "Recieved" }, { status: "Sent" }] },
+          { $set: { status: "Seen" } }
+        ),
+        UnReadMessage.deleteMany({ chatId, reciever }),
+      ]);
+    } catch (error) {
+      console.log(error, "Error in deleting Temp messages");
+    }
+    const senderOnline = onlineUsers.has(sender);
+
+    if (senderOnline) {
+      const senderSocket = getSockets([sender]);
+      socket.to(senderSocket).emit(REFETCH_MESSAGE, { refetchId: chatId });
     }
   });
 

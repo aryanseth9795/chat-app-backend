@@ -3,6 +3,7 @@ import mongoose, { Schema, model, Types } from "mongoose";
 const schema = new Schema(
   {
     content: String,
+    _id: { type: String, required: true },
 
     attachments: [
       {
@@ -27,6 +28,7 @@ const schema = new Schema(
       ref: "Chat",
       required: true,
     },
+    status: { type: String, required: true },
   },
   {
     timestamps: true,

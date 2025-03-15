@@ -1,25 +1,26 @@
 import mongoose, { Schema, model, Types } from "mongoose";
-import { stringify } from "querystring";
 
 const schema = new Schema(
   {
-    chat: {
+    _id: { type: String, required: true },
+
+    chatId: {
       type: Types.ObjectId,
       ref: "Chat",
       required: true,
     },
-
     sender: {
       type: Types.ObjectId,
       ref: "User",
       required: true,
     },
-    reciever: {
-      type: Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    messageId: String,
+    receiver: [
+      {
+        type: Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
   },
   {
     timestamps: true,
