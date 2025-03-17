@@ -42,17 +42,21 @@ const corsOptions = {
   origin: ["https://chatsup.aryanseth.in", process.env.CLIENT_URL],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
-  sameSite: "None", // for dev it will commented
 };
 
 // Cookies Option
 export const cookieOptions = {
   maxAge:
     process.env.COOKIE_EXPIRY * 24 * 60 * 60 * 1000 || 3 * 24 * 60 * 60 * 1000,
-  sameSite: "None", // for dev it will commented
   httpOnly: true,
   secure: process.env.NODE_ENV !== "DEVELOPMENT",
 };
+
+// Setting SameSite to None in Production
+if (process.env.NODE_ENV !== "DEVELOPMENT") {
+  corsOptions.sameSite = "None";
+  cookieOptions.sameSite = "None";
+}
 
 // Connecting to Database
 dbConnect(process.env.MONGO_URI);
