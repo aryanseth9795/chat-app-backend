@@ -133,6 +133,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on(FETCH_UNREAD_MESSAGES, async () => {
+
     const unreaddata = await UnReadMessage.aggregate([
       { $match: { receiver: user._id } },
       {
@@ -231,22 +232,27 @@ io.on("connection", (socket) => {
   });
 
   socket.on(SEEN_MESSAGE, async ({ chatId, messageId, sender }) => {
+    
+    if (sender === user._id.toString()) return;
     const membersSockets = getSockets([sender]);
-    if (membersSockets)
+    if (membersSockets) {
+      
       socket
         .to(membersSockets)
         .emit(UPDATE_SEEN_MESSAGE, { chatId, messageId });
-    try {
-      await Message.findOneAndUpdate(
-        { chat: chatId, _id: messageId },
-        { status: "Seen" }
-      );
-    } catch (error) {
-      console.log(error);
+      try {
+        await Message.findOneAndUpdate(
+          { chat: chatId, _id: messageId },
+          { status: "Seen" }
+        );
+      } catch (error) {
+        console.log(error);
+      }
     }
   });
 
   socket.on(MARK_ALL_READ_MESSAGE, async ({ chatId, reciever, sender }) => {
+  
     if (sender === user._id.toString()) return;
     try {
       await Promise.all([
