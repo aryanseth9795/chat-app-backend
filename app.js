@@ -39,7 +39,7 @@ const app = express();
 
 //Cors option
 const corsOptions = {
-  origin: ["https://chatsup.aryanseth.in", process.env.CLIENT_URL],
+  origin: ["https://chatsup.aryantechie.in", process.env.CLIENT_URL],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
