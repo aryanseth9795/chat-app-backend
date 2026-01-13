@@ -39,7 +39,7 @@ const app = express();
 
 //Cors option
 const corsOptions = {
-  origin: ["https://chatsup.aryanseth.in", process.env.CLIENT_URL],
+   origin: ["https://chatsup.aryanseth.in", process.env.CLIENT_URL],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
@@ -319,8 +319,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Applying All ErrorHandling
-app.use(errorMiddleware);
+
 
 // Keeping Server Alive On Render
 const keepServerAwake = () => {
@@ -337,6 +336,11 @@ const keepServerAwake = () => {
 if (process.env.NODE_ENV !== "DEVELOPMENT") {
   keepServerAwake();
 }
+
+
+// Applying All ErrorHandling
+app.use(errorMiddleware);
+
 
 //Listening To Port
 server.listen(process.env.PORT || 5000, () => {

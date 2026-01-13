@@ -9,6 +9,7 @@ const sendToken = async (res, user, code, message) => {
   res.status(code).cookie("token", token, cookieOptions).json({
     success: true,
     message,
+    token,
   });
 };
 
